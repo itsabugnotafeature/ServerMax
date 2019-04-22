@@ -24,7 +24,7 @@ def do_http_response(conn, uri):
                 html_string = ""
                 for string in html_strings:
                     html_string += string
-                
+
                 http_string = status_line + "Content-Type: text/" + type + header_end + html_string
 
                 http_bytes = bytes(http_string, 'UTF-8')
@@ -74,7 +74,7 @@ def edit_options(key, value):
                 line += " "
             line += "\n"
             lines[0] = line
-        
+
         elif key == "port":
             line = lines[1].rstrip().split(" ")
             line[2] = value
@@ -92,14 +92,23 @@ def parse_cmd_line_args():
     global HOST
     global PORT
     argv = []
-    for index in range(1,len(sys.argv), 2):
+
+    commands_with_args = ["-h", "-p", "-m"]
+    for index in range(1,len(sys.argv)):
         try:
-            if sys.argv[index].index("-") != 0:
-                print("{cmd} takes an argument".format(cmd=sys.argv[index]))
-                continue
-            argv.append((sys.argv[index], sys.argv[index + 1]))
+            cmd = sys.argv[index]
+            if cmd in commands_with_args:
+                arg = sys.argv[index + 1]
+                if "-" in arg:
+                    print("{cmd} takes an argument".format(cmd=sys.argv[index]))
+                    continue
+                else:
+                    argv.append((cmd, arg))
+            else:
+                argv.append((cmd, ""))
         except IndexError:
             print("{cmd} takes an argument".format(cmd=sys.argv[index]))
+
     for cmd, arg in argv:
         if cmd == "-h":
             if arg != HOST:
@@ -127,7 +136,7 @@ def parse_cmd_line_args():
                 edit_options("host", "localhost")
                 edit_options("port", "8080")
         elif cmd == "-help":
-            for command, desc in options_explanations:
+            for command, desc in options_explanations.items():
                 print(command + " : " + desc)
             sys.exit()
     print("Running server on {host}:{port}".format(host=HOST, port=PORT))
@@ -146,6 +155,7 @@ while is_running:
     connection, address = server_socket.accept()
     print("Connected to {address}".format(address=address))
     data = connection.recv(1024)
+
     if data:
         string_rep = data.decode('UTF-8')
         if string_rep == 'q':
