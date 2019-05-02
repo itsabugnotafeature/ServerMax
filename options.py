@@ -1,5 +1,5 @@
-HOST = '10.174.92.215'
-PORT = 80
+HOST = ''               
+PORT = 8080 
 
 options_explanations = {
 "-h" : "Followed by a IPv4 hostname in XXX.XXX.XXX format, 'localhost'",

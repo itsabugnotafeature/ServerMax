@@ -126,14 +126,14 @@ def parse_cmd_line_args():
                 print("Port already in use.\n Port left unchanged.")
         elif cmd == "-m":
             if arg == "lh":
-                HOST = "localhost"
+                HOST = ""
                 PORT = 80
-                edit_options("host", "localhost")
+                edit_options("host", "")
                 edit_options("port", "80")
             elif arg == "lp":
-                HOST = "localhost"
+                HOST = ""
                 PORT = 8080
-                edit_options("host", "localhost")
+                edit_options("host", "")
                 edit_options("port", "8080")
         elif cmd == "-help":
             for command, desc in options_explanations.items():
