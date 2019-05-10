@@ -1,5 +1,6 @@
-HOST = ''                     
+HOST = ''
 PORT = 8080
+ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
 
 options_explanation = {
 "-h" : "Followed by a IPv4 hostname in XXX.XXX.XXX format, 'localhost'",

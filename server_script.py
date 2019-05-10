@@ -4,36 +4,41 @@ import socket
 from options import *
 import sys
 import selectors
-import types
+import Message
 
 html_404_string = "<!DOCTYPE html><html><body><h1 align='center'>404</h1> <p align='center'>File Not Found!</p></body></html>"
 ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
+
+sel = selectors.DefaultSelector()
+
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Avoid bind() exception: OSError: [Errno 48] Address already in use
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+server_socket.bind((HOST, PORT))
+
+print("Running server on {host}:{port}".format(host=HOST, port=PORT))
+print()
+
+server_socket.listen(5)
+
+is_running = True
+
+server_socket.setblocking(False)
+sel.register(server_socket, selectors.EVENT_READ, data=None)
 
 def accept_wrapper(socket):
     connection, address = server_socket.accept()
     print(f"Connected to {address}")
     connection.setblocking(False)
-    data = types.SimpleNamespace(address=address, inbytes=b'', outbytes=b'')
+    data = Message.Message(sel, connection, address)
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(connection, events, data=data)
 
 def service_connection(key, mask):
-    sock = key.fileobj
     data = key.data
-    if mask & selectors.EVENT_READ:
-        recv_data = sock.recv(1024)
-        if recv_data:
-            data.outbytes += recv_data #TODO: reply to http requests
-        else:
-            print(f"Closing connection to {data.address}\n")
-            sel.unregister(sock)
-            sock.close()
-    if mask & selectors.EVENT_WRITE:
-        if data.outbytes:
-            print(f"Echoing '{data.outbytes.decode('utf8')}'")
-            #sent = sock.send(data.outbytes)
-            #data.outbytes = data.outbytes[sent:]
-            data.outbytes = b''
+    data.process_events(mask)
 
 def do_http_response(conn, uri):
     status_line = "HTTP/1.1 200 OK\n"
@@ -162,24 +167,6 @@ def parse_cmd_line_args():
 ### Beginning of code ###
 
 parse_cmd_line_args()
-
-sel = selectors.DefaultSelector()
-
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# Avoid bind() exception: OSError: [Errno 48] Address already in use
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-server_socket.bind((HOST, PORT))
-
-print("Running server on {host}:{port}".format(host=HOST, port=PORT))
-
-server_socket.listen(5)
-
-is_running = True
-
-server_socket.setblocking(False)
-sel.register(server_socket, selectors.EVENT_READ, data=None)
 
 while is_running:
     events = sel.select(timeout=None)
