@@ -66,7 +66,6 @@ class Message:
 
     def _close(self):
         Logger.log(f"Closing connection with {self._address[0]}:{self._address[1]}", Logger.LogLevel.NOTICE)
-        print()
         try:
             self._selector.unregister(self._connection)
         except Exception as e:
@@ -157,6 +156,9 @@ class Message:
 
     def create_status(self):
         self.status_line = {"http-version" : "HTTP/1.1"}
+        if self._start_line["request-uri"] == "/":
+            self._start_line["request-uri"] = "/index.html"
+
         if os.path.isfile(options.ROOT + self._start_line["request-uri"]):
             self.status_line["status-code"] = "200"
             self.status_line["status-text"] = "OK"
@@ -176,13 +178,13 @@ class Message:
 
         response_string += "\r\n"
 
+        self._send_buffer += bytes(response_string, 'utf-8')
+
         if self.status_line["status-code"] == "200":
-            with open(options.ROOT + self._start_line["request-uri"], mode="r") as file:
-                response_string += file.read()
+            with open(options.ROOT + self._start_line["request-uri"], mode="rb") as file:
+                self._send_buffer += file.read()
                 Logger.log(f"Served file for: {self._start_line['request-uri']}", Logger.LogLevel.PLAIN)
         else:
             Logger.log(f"Unable to serve file for: {self._start_line['request-uri']}", Logger.LogLevel.WARNING)
 
         self._completed_response = True
-
-        self._send_buffer += bytes(response_string, 'utf-8')
