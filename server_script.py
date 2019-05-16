@@ -132,5 +132,6 @@ while is_running:
             else:
                 service_connection(key, mask)
     except KeyboardInterrupt:
-        print("Closing server socket")
+        print("\033[10DClosing server socket")
         server_socket.close()
+        break
