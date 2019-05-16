@@ -7,68 +7,6 @@ import selectors
 import Message
 import Logger
 
-<<<<<<< HEAD
-html_404_string = "<!DOCTYPE html><html><body><h1 align='center'>404</h1> <p align='center'>File Not Found!</p></body></html>"
-ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
-
-def do_http_response(conn, uri):
-    status_line = "HTTP/1.1 200 OK\n"
-    header_end = "\n\r\n"
-    try:
-        if uri == "/":
-            uri = "/index.html"
-        type = "html"
-        try:
-            type = uri[uri.index(".") + 1:]
-        except ValueError:
-            uri = uri + "." + type
-        if type == "html" or type == "css":
-            with open(ROOT + uri) as file:
-                html_strings = file.readlines()
-                html_string = ""
-                for string in html_strings:
-                    html_string += string
-
-                http_string = status_line + "Content-Type: text/" + type + header_end + html_string
-
-                http_bytes = bytes(http_string, 'UTF-8')
-                conn.sendall(http_bytes)
-                print("{uri} file served".format(uri=uri))
-        elif type == "png" or type == "jpg" or type == "gif" or uri == "/favicon.ico":
-            with open(ROOT + uri, 'rb') as pic:
-                pic_bytes = pic.read()
-                http_string = status_line + "Content-Type: image/" + type + header_end
-                http_bytes = bytes(http_string, 'UTF-8') + pic_bytes
-                conn.sendall(http_bytes)
-                print("{uri} image served".format(uri=uri))
-        else:
-            print("Cannot server {uri}".format(uri=uri))
-    except FileNotFoundError:
-        status_line = "HTTP/1.1 404 FILE_NOT_FOUND\n\r\n"
-        http_bytes = bytes(status_line + html_404_string, 'UTF-8')
-        conn.sendall(http_bytes)
-        print("File Not Found")
-    except IsADirectoryError:
-        status_line = "HTTP/1.1 404 FILE_NOT_FOUND\n\r\n"
-        http_bytes = bytes(status_line + html_404_string, 'UTF-8')
-        conn.sendall(http_bytes)
-        print("File Not Found")
-    except UnicodeDecodeError:
-        status_line = "HTTP/1.1 404 FILE_NOT_FOUND\n\r\n"
-        http_bytes = bytes(status_line + html_404_string, 'UTF-8')
-        conn.sendall(http_bytes)
-        print("File Not Found")
-
-def parse_http_uri(http_request):
-    first_sp = http_request.index(" ")
-    len_to_first_sp = len(http_request[:first_sp])
-    second_sp = http_request[first_sp + 1:].index(" ")
-    uri = http_request[first_sp + 1:second_sp + len_to_first_sp + 1]
-    print("Resource request for {uri}".format(uri=uri))
-    return uri
-=======
->>>>>>> multi-conn
-
 def edit_options(key, value):
     with open("options.py", 'r+') as file:
         lines = file.readlines()
@@ -172,22 +110,6 @@ sel.register(server_socket, selectors.EVENT_READ, data=None)
 
 def accept_wrapper(socket):
     connection, address = server_socket.accept()
-<<<<<<< HEAD
-    print("Connected to {address}".format(address=address))
-    data = connection.recv(1024)
-
-    if data:
-        string_rep = data.decode('UTF-8')
-        if string_rep == 'q':
-            is_running = False
-            break
-        uri = parse_http_uri(string_rep)
-        do_http_response(connection, uri)
-    print("Closing connection")
-    connection.close()
-print("Closing server socket")
-server_socket.close()
-=======
     Logger.log(f"Connected to {address}", Logger.LogLevel.PLAIN)
     connection.setblocking(False)
     data = Message.Message(sel, connection, address)
@@ -212,4 +134,3 @@ while is_running:
         print("\033[10DClosing server socket")
         server_socket.close()
         break
->>>>>>> multi-conn

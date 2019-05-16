@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-HOST = ''               
-PORT = 8080 
-=======
 HOST = ''
 PORT = 8080
 ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
->>>>>>> multi-conn
 
 options_explanations = {
 "-h" : "Followed by a IPv4 hostname in XXX.XXX.XXX format, 'localhost'",
