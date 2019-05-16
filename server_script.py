@@ -3,7 +3,11 @@
 import socket
 from options import *
 import sys
+import selectors
+import Message
+import Logger
 
+<<<<<<< HEAD
 html_404_string = "<!DOCTYPE html><html><body><h1 align='center'>404</h1> <p align='center'>File Not Found!</p></body></html>"
 ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
 
@@ -62,6 +66,8 @@ def parse_http_uri(http_request):
     uri = http_request[first_sp + 1:second_sp + len_to_first_sp + 1]
     print("Resource request for {uri}".format(uri=uri))
     return uri
+=======
+>>>>>>> multi-conn
 
 def edit_options(key, value):
     with open("options.py", 'r+') as file:
@@ -86,7 +92,6 @@ def edit_options(key, value):
         file.seek(0)
         for line in lines:
             file.write(line)
-
 
 def parse_cmd_line_args():
     global HOST
@@ -139,20 +144,35 @@ def parse_cmd_line_args():
             for command, desc in options_explanations.items():
                 print(command + " : " + desc)
             sys.exit()
-    print("Running server on {host}:{port}".format(host=HOST, port=PORT))
 
-### Beginning of code ###
+
+html_404_string = "<!DOCTYPE html><html><body><h1 align='center'>404</h1> <p align='center'>File Not Found!</p></body></html>"
+ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
 
 parse_cmd_line_args()
 
+sel = selectors.DefaultSelector()
+
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Avoid bind() exception: OSError: [Errno 48] Address already in use
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 server_socket.bind((HOST, PORT))
+
+print("Running server on {host}:{port}".format(host=HOST, port=PORT))
+print()
+
 server_socket.listen(5)
 
 is_running = True
 
-while is_running:
+server_socket.setblocking(False)
+sel.register(server_socket, selectors.EVENT_READ, data=None)
+
+def accept_wrapper(socket):
     connection, address = server_socket.accept()
+<<<<<<< HEAD
     print("Connected to {address}".format(address=address))
     data = connection.recv(1024)
 
@@ -167,3 +187,29 @@ while is_running:
     connection.close()
 print("Closing server socket")
 server_socket.close()
+=======
+    Logger.log(f"Connected to {address}", Logger.LogLevel.PLAIN)
+    connection.setblocking(False)
+    data = Message.Message(sel, connection, address)
+    events = selectors.EVENT_READ | selectors.EVENT_WRITE
+    sel.register(connection, events, data=data)
+
+def service_connection(key, mask):
+    data = key.data
+    data.process_events(mask)
+
+### Beginning of code ###
+
+while is_running:
+    try:
+        events = sel.select(timeout=None)
+        for key, mask in events:
+            if key.data is None:
+                accept_wrapper(key.fileobj)
+            else:
+                service_connection(key, mask)
+    except KeyboardInterrupt:
+        print("\033[10DClosing server socket")
+        server_socket.close()
+        break
+>>>>>>> multi-conn
