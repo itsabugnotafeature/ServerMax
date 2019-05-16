@@ -5,96 +5,7 @@ from options import *
 import sys
 import selectors
 import Message
-
-html_404_string = "<!DOCTYPE html><html><body><h1 align='center'>404</h1> <p align='center'>File Not Found!</p></body></html>"
-ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
-
-sel = selectors.DefaultSelector()
-
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# Avoid bind() exception: OSError: [Errno 48] Address already in use
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-server_socket.bind((HOST, PORT))
-
-print("Running server on {host}:{port}".format(host=HOST, port=PORT))
-print()
-
-server_socket.listen(5)
-
-is_running = True
-
-server_socket.setblocking(False)
-sel.register(server_socket, selectors.EVENT_READ, data=None)
-
-def accept_wrapper(socket):
-    connection, address = server_socket.accept()
-    print(f"Connected to {address}")
-    connection.setblocking(False)
-    data = Message.Message(sel, connection, address)
-    events = selectors.EVENT_READ | selectors.EVENT_WRITE
-    sel.register(connection, events, data=data)
-
-def service_connection(key, mask):
-    data = key.data
-    data.process_events(mask)
-
-def do_http_response(conn, uri):
-    status_line = "HTTP/1.1 200 OK\n"
-    header_end = "\n\r\n"
-    try:
-        if uri == "/":
-            uri = "/index.html"
-        type = "html"
-        try:
-            type = uri[uri.index(".") + 1:]
-        except ValueError:
-            uri = uri + "." + type
-        if type == "html" or type == "css":
-            with open(ROOT + uri) as file:
-                html_strings = file.readlines()
-                html_string = ""
-                for string in html_strings:
-                    html_string += string
-
-                http_string = status_line + "Content-Type: text/" + type + header_end + html_string
-
-                http_bytes = bytes(http_string, 'UTF-8')
-                conn.sendall(http_bytes)
-                print("{uri} file served".format(uri=uri))
-        elif type == "png" or type == "jpg" or type == "gif" or uri == "/favicon.ico":
-            with open(ROOT + uri, 'rb') as pic:
-                pic_bytes = pic.read()
-                http_string = status_line + "Content-Type: image/" + type + header_end
-                http_bytes = bytes(http_string, 'UTF-8') + pic_bytes
-                conn.sendall(http_bytes)
-                print("{uri} image served".format(uri=uri))
-        else:
-            print("Cannot server {uri}".format(uri=uri))
-    except FileNotFoundError:
-        status_line = "HTTP/1.1 404 FILE_NOT_FOUND\n\r\n"
-        http_bytes = bytes(status_line + html_404_string, 'UTF-8')
-        conn.sendall(http_bytes)
-        print("File Not Found")
-    except IsADirectoryError:
-        status_line = "HTTP/1.1 404 FILE_NOT_FOUND\n\r\n"
-        http_bytes = bytes(status_line + html_404_string, 'UTF-8')
-        conn.sendall(http_bytes)
-        print("File Not Found")
-    except UnicodeDecodeError:
-        status_line = "HTTP/1.1 404 FILE_NOT_FOUND\n\r\n"
-        http_bytes = bytes(status_line + html_404_string, 'UTF-8')
-        conn.sendall(http_bytes)
-        print("File Not Found")
-
-def parse_http_uri(http_request):
-    first_sp = http_request.index(" ")
-    len_to_first_sp = len(http_request[:first_sp])
-    second_sp = http_request[first_sp + 1:].index(" ")
-    uri = http_request[first_sp + 1:second_sp + len_to_first_sp + 1]
-    print("Resource request for {uri}".format(uri=uri))
-    return uri
+import Logger
 
 def edit_options(key, value):
     with open("options.py", 'r+') as file:
@@ -119,7 +30,6 @@ def edit_options(key, value):
         file.seek(0)
         for line in lines:
             file.write(line)
-
 
 def parse_cmd_line_args():
     global HOST
@@ -164,9 +74,44 @@ def parse_cmd_line_args():
                 print(command + " : " + desc)
             sys.exit()
 
-### Beginning of code ###
+
+html_404_string = "<!DOCTYPE html><html><body><h1 align='center'>404</h1> <p align='center'>File Not Found!</p></body></html>"
+ROOT = "/Users/max/Desktop/My Projects/Websites/Test"
 
 parse_cmd_line_args()
+
+sel = selectors.DefaultSelector()
+
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Avoid bind() exception: OSError: [Errno 48] Address already in use
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+server_socket.bind((HOST, PORT))
+
+print("Running server on {host}:{port}".format(host=HOST, port=PORT))
+print()
+
+server_socket.listen(5)
+
+is_running = True
+
+server_socket.setblocking(False)
+sel.register(server_socket, selectors.EVENT_READ, data=None)
+
+def accept_wrapper(socket):
+    connection, address = server_socket.accept()
+    Logger.log(f"Connected to {address}", Logger.LogLevel.PLAIN)
+    connection.setblocking(False)
+    data = Message.Message(sel, connection, address)
+    events = selectors.EVENT_READ | selectors.EVENT_WRITE
+    sel.register(connection, events, data=data)
+
+def service_connection(key, mask):
+    data = key.data
+    data.process_events(mask)
+
+### Beginning of code ###
 
 while is_running:
     events = sel.select(timeout=None)

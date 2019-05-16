@@ -5,8 +5,8 @@ class LogLevel:
     NOTICE = 1 << 2
     PLAIN = 1 << 3
 
-_level = LogLevel.PLAIN
-default_level = _level
+_level = LogLevel.WARNING
+_default_level = _level
 
 def log(message, level=None):
     message = repr(message)

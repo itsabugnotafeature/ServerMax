@@ -3,10 +3,14 @@ import selectors
 import Logger
 import options
 import os
+import time
+import MaxParse
 
 class Message:
 
     def __init__(self, selector, connection, address):
+        self._start_time = time.time()
+
         self._address = address
         self._connection = connection
         self._selector = selector
@@ -49,6 +53,9 @@ class Message:
                 self._send_buffer = self._send_buffer[sent:]
 
                 if self._completed_response and not self._send_buffer:
+                    end_time = time.time()
+                    milliseconds_time = round((end_time - self._start_time) * 1000)
+                    Logger.log(f"Served file for: {self._start_line['request-uri']['path']} in {milliseconds_time} milliseconds", Logger.LogLevel.PLAIN)
                     self.sent = True
                     self._close()
 
@@ -113,9 +120,28 @@ class Message:
 
         try:
             values = _start_line.strip().split(" ")
-            self._start_line = {"method" : values[0], "request-uri" : values[1], "http-version" : values[2]}
+            parsed_uri = self.parse_uri(values[1])
+            self._start_line = {"method" : values[0], "request-uri" : parsed_uri, "http-version" : values[2]}
         except IndexError:
             Logger.log("Invalid start line", Logger.LogLevel.ERROR)
+
+    def parse_uri(self, uri):
+        uri = uri.strip()
+        if "?" in uri:
+            path, _queries = uri.split("?")
+            _queries = _queries.split("&")
+            queries = {}
+            for query_string in _queries:
+                try:
+                    query, value = query_string.split("=")
+                    if value == '':
+                        continue
+                    queries[query] = value
+                except ValueError:
+                    Logger.log(f"Invalid query string: {query_string}", Logger.LogLevel.WARNING)
+            return {"path" : path, "queries" : queries}
+        else:
+            return {"path" : uri, "queries" : {}}
 
     def process_headers(self):
         try:
@@ -139,7 +165,7 @@ class Message:
                 Logger.log(error, Logger.LogLevel.ERROR)
 
     def process_body(self):
-        Logger.log("Ignored body", Logger.LogLevel.WARNING)
+        Logger.log("Ignored body", Logger.LogLevel.NOTICE)
         self._recieved_request = True
 
     def write(self):
@@ -156,10 +182,10 @@ class Message:
 
     def create_status(self):
         self.status_line = {"http-version" : "HTTP/1.1"}
-        if self._start_line["request-uri"] == "/":
-            self._start_line["request-uri"] = "/index.html"
+        if self._start_line["request-uri"]["path"] == "/":
+            self._start_line["request-uri"]["path"] = "/index.html"
 
-        if os.path.isfile(options.ROOT + self._start_line["request-uri"]):
+        if os.path.isfile(options.ROOT + self._start_line["request-uri"]["path"]):
             self.status_line["status-code"] = "200"
             self.status_line["status-text"] = "OK"
         else:
@@ -180,11 +206,15 @@ class Message:
 
         self._send_buffer += bytes(response_string, 'utf-8')
 
-        if self.status_line["status-code"] == "200":
-            with open(options.ROOT + self._start_line["request-uri"], mode="rb") as file:
+        if ".html" in self._start_line["request-uri"]["path"] and self.status_line["status-code"] == "200":
+            with open(options.ROOT + self._start_line["request-uri"]["path"]) as file:
+                parse_results = MaxParse.parse(file, **self._start_line["request-uri"]["queries"])
+                response_lines = "".join(parse_results)
+                self._send_buffer += bytes(response_lines, 'utf-8')
+        elif self.status_line["status-code"] == "200":
+            with open(options.ROOT + self._start_line["request-uri"]["path"], mode="rb") as file:
                 self._send_buffer += file.read()
-                Logger.log(f"Served file for: {self._start_line['request-uri']}", Logger.LogLevel.PLAIN)
         else:
-            Logger.log(f"Unable to serve file for: {self._start_line['request-uri']}", Logger.LogLevel.WARNING)
+            Logger.log(f"Unable to serve file for: {self._start_line['request-uri']['path']}", Logger.LogLevel.WARNING)
 
         self._completed_response = True
